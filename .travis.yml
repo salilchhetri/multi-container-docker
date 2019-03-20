@@ -1,0 +1,28 @@
+sudo: required
+services:
+  - docker
+
+before_install:
+  - docker build -t salilchhetri/multi-container-docker-test -f ./client/Dockerfile.dev ./client
+
+script:
+  - docker run salilchhetri/multi-container-docker-test npm run test -- --coverage
+
+after_success:
+  - docker build -t salilchhetri/multi-client ./client
+  - docker build -t salilchhetri/multi-nginx ./nginx
+  - docker build -t salilchhetri/multi-worker ./worker
+  - docker build -t salilchhetri/multi-server ./server
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  - docker push salilchhetri/multi-client
+  - docker push salilchhetri/multi-nginx
+  - docker push salilchhetri/multi-worker
+  - docker push salilchhetri/multi-server
+  
+deploy:
+  provider: heroku
+  api_key:
+    secure: $HEROKU_API_KEY
+  app:
+    master: docker-kubernetes
+  on: master
